@@ -4,18 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Text-to-Image Prompt Generator</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
+        :root {
+            --bg-color: #f4f4f4;
+            --text-color: #333;
+            --input-bg: #fff;
+            --input-border: #ddd;
+            --button-bg: #3498db;
+            --button-hover: #2980b9;
+        }
+        .dark-mode {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --input-bg: #34495e;
+            --input-border: #7f8c8d;
+            --button-bg: #e74c3c;
+            --button-hover: #c0392b;
+        }
         body {
             font-family: Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
             max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #f4f4f4;
         }
         h1 {
-            color: #2c3e50;
+            color: var(--text-color);
             text-align: center;
         }
         .input-group {
@@ -28,57 +49,92 @@
         }
         input[type="text"], input[type="password"], select, textarea {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
+            padding: 10px;
+            border: 1px solid var(--input-border);
             border-radius: 4px;
             box-sizing: border-box;
+            background-color: var(--input-bg);
+            color: var(--text-color);
         }
         button {
-            background-color: #3498db;
+            background-color: var(--button-bg);
             color: white;
             padding: 10px 15px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            transition: background-color 0.3s;
         }
         button:hover {
-            background-color: #2980b9;
+            background-color: var(--button-hover);
         }
         #output {
-            background-color: white;
-            border: 1px solid #ddd;
+            background-color: var(--input-bg);
+            border: 1px solid var(--input-border);
             border-radius: 4px;
             padding: 20px;
             white-space: pre-wrap;
             word-wrap: break-word;
         }
+        .dark-mode-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            input[type="text"], input[type="password"], select, textarea {
+                font-size: 16px;
+            }
+        }
+        .copy-button {
+            margin-top: 10px;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-    <h1>AI Text-to-Image Prompt Generator</h1>
-    <div class="input-group">
-        <label for="baseUrl">Base URL:</label>
-        <input type="text" id="baseUrl" value="https://api.groq.com/openai/v1" placeholder="Enter base URL">
+    <div class="container">
+        <h1>AI Text-to-Image Prompt Generator</h1>
+        <button id="darkModeToggle" class="dark-mode-toggle">Toggle Dark Mode</button>
+        <div class="input-group">
+            <label for="baseUrl">Base URL:</label>
+            <input type="text" id="baseUrl" value="https://api.groq.com/openai/v1" placeholder="Enter base URL">
+        </div>
+        <div class="input-group">
+            <label for="apiKey">API Key:</label>
+            <input type="password" id="apiKey" placeholder="Enter your API key">
+        </div>
+        <div class="input-group">
+            <label for="model">Model:</label>
+            <select id="model">
+                <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
+                <option value="llama-3.1-70b-versatile">llama-3.1-70b-versatile</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label for="prompt">Prompt:</label>
+            <textarea id="prompt" rows="4" placeholder="Enter your prompt here"></textarea>
+        </div>
+        <button onclick="generatePrompt()" id="generateButton">Generate</button>
+        <h2>Output:</h2>
+        <div id="output"></div>
+        <button onclick="copyToClipboard()" class="copy-button">Copy to Clipboard</button>
     </div>
-    <div class="input-group">
-        <label for="apiKey">API Key:</label>
-        <input type="password" id="apiKey" placeholder="Enter your API key">
-    </div>
-    <div class="input-group">
-        <label for="model">Model:</label>
-        <select id="model">
-            <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
-            <option value="llama-3.1-70b-versatile">llama-3.1-70b-versatile</option>
-        </select>
-    </div>
-    <div class="input-group">
-        <label for="prompt">Prompt:</label>
-        <textarea id="prompt" rows="4" placeholder="Enter your prompt here"></textarea>
-    </div>
-    <button onclick="generatePrompt()">Generate</button>
-    <h2>Output:</h2>
-    <div id="output"></div>
 
     <script>
         const systemPrompt = `
@@ -166,14 +222,41 @@ Remember:
 
 Generate:`;
 
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const body = document.body;
+        const baseUrlInput = document.getElementById('baseUrl');
+        const modelSelect = document.getElementById('model');
+
+        // Load saved preferences
+        if (localStorage.getItem('darkMode') === 'true') {
+            body.classList.add('dark-mode');
+        }
+        baseUrlInput.value = localStorage.getItem('baseUrl') || 'https://api.groq.com/openai/v1';
+        modelSelect.value = localStorage.getItem('model') || 'mixtral-8x7b-32768';
+
+        darkModeToggle.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', body.classList.contains('dark-mode'));
+        });
+
+        baseUrlInput.addEventListener('change', (e) => {
+            localStorage.setItem('baseUrl', e.target.value);
+        });
+
+        modelSelect.addEventListener('change', (e) => {
+            localStorage.setItem('model', e.target.value);
+        });
+
         async function generatePrompt() {
             const baseUrl = document.getElementById('baseUrl').value;
             const apiKey = document.getElementById('apiKey').value;
             const model = document.getElementById('model').value;
             const userPrompt = document.getElementById('prompt').value;
             const outputDiv = document.getElementById('output');
+            const generateButton = document.getElementById('generateButton');
 
-            outputDiv.textContent = 'Generating...';
+            outputDiv.innerHTML = '<div class="loading"></div> Generating...';
+            generateButton.disabled = true;
 
             try {
                 const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -199,6 +282,7 @@ Generate:`;
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
+                outputDiv.innerHTML = '';
 
                 while (true) {
                     const { value, done } = await reader.read();
@@ -216,7 +300,7 @@ Generate:`;
                                 const parsed = JSON.parse(data);
                                 const content = parsed.choices[0].delta.content;
                                 if (content) {
-                                    outputDiv.textContent += content;
+                                    outputDiv.innerHTML = marked.parse(outputDiv.textContent + content);
                                 }
                             } catch (error) {
                                 console.error('Error parsing JSON:', error);
@@ -226,8 +310,21 @@ Generate:`;
                 }
             } catch (error) {
                 console.error('Error:', error);
-                outputDiv.textContent = `Error: ${error.message}`;
+                outputDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            } finally {
+                generateButton.disabled = false;
             }
+        }
+
+        function copyToClipboard() {
+            const outputDiv = document.getElementById('output');
+            const textArea = document.createElement('textarea');
+            textArea.value = outputDiv.textContent;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            alert('Copied to clipboard!');
         }
     </script>
 </body>
