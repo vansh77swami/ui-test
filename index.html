@@ -4,113 +4,153 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Text-to-Image Prompt Generator</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
-            --bg-color: #f4f4f4;
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --background-color: #f4f4f4;
             --text-color: #333;
-            --input-bg: #fff;
+            --input-background: #fff;
             --input-border: #ddd;
-            --button-bg: #3498db;
-            --button-hover: #2980b9;
         }
+
         .dark-mode {
-            --bg-color: #2c3e50;
+            --primary-color: #2980b9;
+            --secondary-color: #ecf0f1;
+            --background-color: #2c3e50;
             --text-color: #ecf0f1;
-            --input-bg: #34495e;
+            --input-background: #34495e;
             --input-border: #7f8c8d;
-            --button-bg: #e74c3c;
-            --button-hover: #c0392b;
         }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
             line-height: 1.6;
             color: var(--text-color);
-            background-color: var(--bg-color);
-            margin: 0;
+            background-color: var(--background-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
             padding: 20px;
-            transition: background-color 0.3s, color 0.3s;
         }
+
         .container {
             max-width: 800px;
             margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
+
         h1 {
-            color: var(--text-color);
+            color: var(--secondary-color);
             text-align: center;
+            margin-bottom: 1rem;
+            font-size: 1.8rem;
         }
+
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 1rem;
         }
+
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 0.5rem;
             font-weight: bold;
         }
+
         input[type="text"], input[type="password"], select, textarea {
             width: 100%;
-            padding: 10px;
+            padding: 0.75rem;
             border: 1px solid var(--input-border);
             border-radius: 4px;
-            box-sizing: border-box;
-            background-color: var(--input-bg);
+            background-color: var(--input-background);
             color: var(--text-color);
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
         }
+
+        input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25);
+        }
+
         button {
-            background-color: var(--button-bg);
+            background-color: var(--primary-color);
             color: white;
-            padding: 10px 15px;
+            padding: 0.75rem 1rem;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s;
+            font-size: 1rem;
+            transition: background-color 0.3s ease, transform 0.1s ease;
         }
+
         button:hover {
-            background-color: var(--button-hover);
+            background-color: #2980b9;
         }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
         #output {
-            background-color: var(--input-bg);
+            background-color: var(--input-background);
             border: 1px solid var(--input-border);
             border-radius: 4px;
-            padding: 20px;
+            padding: 1rem;
             white-space: pre-wrap;
             word-wrap: break-word;
+            margin-top: 1rem;
+            flex-grow: 1;
         }
-        .dark-mode-toggle {
+
+        .theme-toggle {
             position: absolute;
-            top: 10px;
-            right: 10px;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.5rem;
+            cursor: pointer;
         }
-        @media (max-width: 600px) {
+
+        @media (min-width: 768px) {
             body {
-                padding: 10px;
+                padding: 40px;
             }
-            input[type="text"], input[type="password"], select, textarea {
-                font-size: 16px;
+
+            h1 {
+                font-size: 2.5rem;
             }
-        }
-        .copy-button {
-            margin-top: 10px;
-        }
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+
+            .input-group {
+                display: flex;
+                align-items: center;
+            }
+
+            .input-group label {
+                width: 120px;
+                margin-bottom: 0;
+                margin-right: 1rem;
+            }
+
+            button {
+                align-self: flex-start;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
         <h1>AI Text-to-Image Prompt Generator</h1>
-        <button id="darkModeToggle" class="dark-mode-toggle">Toggle Dark Mode</button>
         <div class="input-group">
             <label for="baseUrl">Base URL:</label>
             <input type="text" id="baseUrl" value="https://api.groq.com/openai/v1" placeholder="Enter base URL">
@@ -130,10 +170,8 @@
             <label for="prompt">Prompt:</label>
             <textarea id="prompt" rows="4" placeholder="Enter your prompt here"></textarea>
         </div>
-        <button onclick="generatePrompt()" id="generateButton">Generate</button>
-        <h2>Output:</h2>
+        <button onclick="generatePrompt()">Generate</button>
         <div id="output"></div>
-        <button onclick="copyToClipboard()" class="copy-button">Copy to Clipboard</button>
     </div>
 
     <script>
@@ -222,41 +260,14 @@ Remember:
 
 Generate:`;
 
-        const darkModeToggle = document.getElementById('darkModeToggle');
-        const body = document.body;
-        const baseUrlInput = document.getElementById('baseUrl');
-        const modelSelect = document.getElementById('model');
-
-        // Load saved preferences
-        if (localStorage.getItem('darkMode') === 'true') {
-            body.classList.add('dark-mode');
-        }
-        baseUrlInput.value = localStorage.getItem('baseUrl') || 'https://api.groq.com/openai/v1';
-        modelSelect.value = localStorage.getItem('model') || 'mixtral-8x7b-32768';
-
-        darkModeToggle.addEventListener('click', () => {
-            body.classList.toggle('dark-mode');
-            localStorage.setItem('darkMode', body.classList.contains('dark-mode'));
-        });
-
-        baseUrlInput.addEventListener('change', (e) => {
-            localStorage.setItem('baseUrl', e.target.value);
-        });
-
-        modelSelect.addEventListener('change', (e) => {
-            localStorage.setItem('model', e.target.value);
-        });
-
         async function generatePrompt() {
             const baseUrl = document.getElementById('baseUrl').value;
             const apiKey = document.getElementById('apiKey').value;
             const model = document.getElementById('model').value;
             const userPrompt = document.getElementById('prompt').value;
             const outputDiv = document.getElementById('output');
-            const generateButton = document.getElementById('generateButton');
 
-            outputDiv.innerHTML = '<div class="loading"></div> Generating...';
-            generateButton.disabled = true;
+            outputDiv.textContent = 'Generating...';
 
             try {
                 const response = await fetch(`${baseUrl}/chat/completions`, {
@@ -282,7 +293,6 @@ Generate:`;
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = '';
-                outputDiv.innerHTML = '';
 
                 while (true) {
                     const { value, done } = await reader.read();
@@ -300,7 +310,7 @@ Generate:`;
                                 const parsed = JSON.parse(data);
                                 const content = parsed.choices[0].delta.content;
                                 if (content) {
-                                    outputDiv.innerHTML = marked.parse(outputDiv.textContent + content);
+                                    outputDiv.textContent += content;
                                 }
                             } catch (error) {
                                 console.error('Error parsing JSON:', error);
@@ -310,21 +320,12 @@ Generate:`;
                 }
             } catch (error) {
                 console.error('Error:', error);
-                outputDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
-            } finally {
-                generateButton.disabled = false;
+                outputDiv.textContent = `Error: ${error.message}`;
             }
         }
 
-        function copyToClipboard() {
-            const outputDiv = document.getElementById('output');
-            const textArea = document.createElement('textarea');
-            textArea.value = outputDiv.textContent;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-            alert('Copied to clipboard!');
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
         }
     </script>
 </body>
